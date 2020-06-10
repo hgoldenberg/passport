@@ -1,35 +1,40 @@
-var db = require('./database');
-var Sequelize = require('sequelize');
+const db = require("../db/db");
+const S = require("sequelize");
+const crypto = require("crypto");
 
-
-class User extends Sequelize.Model {}
-User.init({
-  username: {
-    type: Sequelize.STRING,
-    allowNull: false,
-  },
-    password: {
-        type: Sequelize.STRING,
-        allowNull: false,
+class User extends S.Model {}
+User.init(
+  {
+    email: {
+      type: S.STRING,
+      validate: {
+        isEmail: true
+      },
+      allowNull: false
     },
-    salt: {type: Sequelize.STRING}
-  
-})
+    password: {
+      type: S.STRING,
+      allowNull: false
+    },
+    salt: { type: S.STRING }
+  },
+  { sequelize: db, modelName: "User" }
+);
 
-User.addHook('beforeCreate',(user)=>{
-    user.salt = crypto.randomBytes(20).toString('hex');
-    
-})
+User.addHook("beforeCreate", user => {
+  user.salt = crypto.randomBytes(20).toString("hex");
+  user.password = user.hashPassword(user.password);
+});
 
-User.prototype.hashpassword = function(){
-    return crypto.createHmac('sha1', salt).update(password).digest('hex')
-}
+User.prototype.hashPassword = function(password) {
+  return crypto
+    .createHmac("sha1", this.salt)
+    .update(password)
+    .digest("hex");
+};
 
+User.prototype.validPassword = function(password) {
+  return this.password === this.hashPassword(password);
+};
 
-
-module.export = User;
-
-
-//{ sequelize: db, modelName: 'user' })
-
-//User.belongsTo(User, {as: 'parent'});
+module.exports = User;
